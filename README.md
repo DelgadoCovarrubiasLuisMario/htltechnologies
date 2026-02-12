@@ -1,6 +1,6 @@
-# Sistema SOP - Sistema de Gestión
+# HTL Electronics - Sistema de Gestión SLA
 
-Aplicación web para gestión de procedimientos operativos estándar (SOP) con timers y registros.
+Aplicación web para gestión de procedimientos operativos estándar (SOP) con timers y registros de SLA.
 
 ## Tecnologías
 
