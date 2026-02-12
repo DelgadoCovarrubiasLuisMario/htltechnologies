@@ -156,7 +156,8 @@ export default function SLAReportImage({ sla, sopTitle, onDownload }: SLAReportI
     }
 
     // Comentarios (caja con borde naranja mejorada) - solo si hay comentarios
-    if (hasComments) {
+    if (hasComments && sla.comments) {
+      const commentsText = sla.comments;
       currentY = drawY;
       const commentBoxX = 75;
       const commentBoxY = currentY + 10;
@@ -185,7 +186,7 @@ export default function SLAReportImage({ sla, sopTitle, onDownload }: SLAReportI
       
       // Dividir comentarios en líneas
       const maxWidth = commentBoxWidth - 45;
-      const words = sla.comments.split(' ');
+      const words = commentsText.split(' ');
       let line = '';
       let y = commentBoxY + 50;
       
