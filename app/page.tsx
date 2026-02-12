@@ -9,11 +9,13 @@ export default function Home() {
   useEffect(() => {
     // Verificar autenticación simple (localStorage)
     // Cuando Firebase esté configurado, se puede cambiar esto
-    const authStatus = localStorage.getItem('authenticated');
-    if (authStatus === 'true') {
-      router.push('/dashboard');
-    } else {
-      router.push('/login');
+    if (typeof window !== 'undefined') {
+      const authStatus = localStorage.getItem('authenticated');
+      if (authStatus === 'true') {
+        router.push('/dashboard');
+      } else {
+        router.push('/login');
+      }
     }
   }, [router]);
 
