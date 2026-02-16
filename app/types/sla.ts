@@ -172,6 +172,12 @@ export function getSLATypesForSOP(sopId: string): Array<{ id: string; name: stri
   return SLA_TYPES_BY_SOP[sopId] || [];
 }
 
+export interface Subtask {
+  id: string;
+  title: string;
+  completed: boolean;
+}
+
 export interface SLA {
   id: string;
   name: string;
@@ -186,6 +192,7 @@ export interface SLA {
   asignacion?: string;
   encargado?: string;
   timeAdjustment?: number; // ajuste de tiempo en milisegundos (positivo = más tiempo, negativo = menos tiempo)
+  subtasks?: Subtask[]; // Lista de subtareas
 }
 
 // Mantener compatibilidad con código existente usando una función

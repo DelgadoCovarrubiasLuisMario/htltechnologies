@@ -147,9 +147,8 @@ export default function SLATimer({ sla, onComplete, onUpdate }: SLATimerProps) {
                 <input
                   type="number"
                   min="0"
-                  max="23"
                   value={hours}
-                  onChange={(e) => setHours(Math.max(0, Math.min(23, parseInt(e.target.value) || 0)))}
+                  onChange={(e) => setHours(Math.max(0, parseInt(e.target.value) || 0))}
                   style={{
                     width: '60px',
                     padding: '6px',

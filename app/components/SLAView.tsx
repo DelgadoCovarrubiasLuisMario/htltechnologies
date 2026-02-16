@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { SLA, getSLADuration } from '@/app/types/sla';
+import { SLA, getSLADuration, Subtask } from '@/app/types/sla';
 import { saveSLA, getSLAById } from '@/app/utils/slaStorage';
 import SLATimer from './SLATimer';
 import SLAReportImage from './SLAReportImage';
@@ -23,6 +23,7 @@ export default function SLAView({ sla: initialSla, sopTitle, onBack, onUpdate }:
   const [editedAsignacion, setEditedAsignacion] = useState(sla.asignacion || '');
   const [editingEncargado, setEditingEncargado] = useState(false);
   const [editedEncargado, setEditedEncargado] = useState(sla.encargado || '');
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
 
   // Actualizar SLA cuando cambie desde fuera
   useEffect(() => {
@@ -50,7 +51,8 @@ export default function SLAView({ sla: initialSla, sopTitle, onBack, onUpdate }:
             updated.status !== sla.status ||
             updated.name !== sla.name ||
             updated.asignacion !== sla.asignacion ||
-            updated.encargado !== sla.encargado) {
+            updated.encargado !== sla.encargado ||
+            JSON.stringify(updated.subtasks) !== JSON.stringify(sla.subtasks)) {
           setSla(updated);
           setEditedName(updated.name);
           setEditedAsignacion(updated.asignacion || '');
@@ -60,7 +62,20 @@ export default function SLAView({ sla: initialSla, sopTitle, onBack, onUpdate }:
     }, 500); // Verificar cada 500ms
 
     return () => clearInterval(interval);
-  }, [sla.id, sla.timeAdjustment, sla.status, sla.name, sla.asignacion, sla.encargado]);
+  }, [sla.id, sla.timeAdjustment, sla.status, sla.name, sla.asignacion, sla.encargado, sla.subtasks]);
+
+  // Verificar si todas las subtareas están completadas y abrir modal de comentarios
+  useEffect(() => {
+    if (sla.status === 'active' && sla.subtasks && sla.subtasks.length > 0 && !showCommentModal) {
+      const allCompleted = sla.subtasks.every(subtask => subtask.completed);
+      
+      // Solo abrir el modal si todas están completadas y el modal no está abierto
+      if (allCompleted) {
+        // Abrir modal de comentarios cuando todas las subtareas estén completadas
+        setShowCommentModal(true);
+      }
+    }
+  }, [sla.subtasks, sla.status, sla.id, showCommentModal]);
 
   const handleComplete = () => {
     setShowCommentModal(true);
@@ -310,18 +325,18 @@ export default function SLAView({ sla: initialSla, sopTitle, onBack, onUpdate }:
         ← Volver al Historial
       </button>
 
-      <div className="card">
-        <div style={{ marginBottom: '20px' }}>
+      <div className="card" style={{ maxHeight: 'calc(100vh - 200px)', overflow: 'auto' }}>
+        <div style={{ marginBottom: '12px' }}>
           {editingName ? (
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               <input
                 type="text"
                 value={editedName}
                 onChange={(e) => setEditedName(e.target.value)}
                 className="input"
-                style={{ flex: 1, marginBottom: 0 }}
+                style={{ flex: 1, marginBottom: 0, fontSize: '14px', padding: '6px' }}
               />
-              <button onClick={handleSaveName} className="btn btn-primary">
+              <button onClick={handleSaveName} className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '12px' }}>
                 Guardar
               </button>
               <button 
@@ -330,6 +345,7 @@ export default function SLAView({ sla: initialSla, sopTitle, onBack, onUpdate }:
                   setEditedName(sla.name);
                 }} 
                 className="btn btn-secondary"
+                style={{ padding: '6px 12px', fontSize: '12px' }}
               >
                 Cancelar
               </button>
@@ -338,8 +354,8 @@ export default function SLAView({ sla: initialSla, sopTitle, onBack, onUpdate }:
             <div>
               <h1 style={{ 
                 color: '#FF6B35', 
-                marginBottom: '12px',
-                fontSize: '24px',
+                marginBottom: '8px',
+                fontSize: '20px',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center'
@@ -348,22 +364,24 @@ export default function SLAView({ sla: initialSla, sopTitle, onBack, onUpdate }:
                 <button
                   onClick={() => setEditingName(true)}
                   style={{
-                    padding: '6px 12px',
+                    padding: '4px 8px',
                     background: '#6B6B6B',
                     color: 'white',
                     border: 'none',
-                    borderRadius: '6px',
+                    borderRadius: '4px',
                     cursor: 'pointer',
-                    fontSize: '12px'
+                    fontSize: '11px'
                   }}
                 >
                   Editar
                 </button>
               </h1>
               <div style={{ 
-                fontSize: '13px',
+                fontSize: '11px',
                 color: '#6B6B6B',
-                marginBottom: '12px'
+                marginBottom: '8px',
+                display: 'flex',
+                gap: '12px'
               }}>
                 <div><strong>Inicio:</strong> {sla.startDate}</div>
                 <div><strong>Fin:</strong> {
@@ -382,11 +400,11 @@ export default function SLAView({ sla: initialSla, sopTitle, onBack, onUpdate }:
               </div>
               <div style={{ 
                 display: 'flex', 
-                gap: '16px', 
+                gap: '12px', 
                 flexWrap: 'wrap',
-                fontSize: '14px',
+                fontSize: '12px',
                 color: '#666',
-                marginBottom: '16px'
+                marginBottom: '12px'
               }}>
                 {editingAsignacion ? (
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -491,21 +509,128 @@ export default function SLAView({ sla: initialSla, sopTitle, onBack, onUpdate }:
           )}
         </div>
 
-        <SLATimer 
-          sla={sla} 
-          onUpdate={() => {
-            const updated = getSLAById(sla.id);
-            if (updated) {
-              setSla(updated);
-            }
-            onUpdate();
-          }} 
-        />
+        {/* Sistema de Subtareas */}
+        {sla.status === 'active' && (
+          <div style={{ marginBottom: '12px', padding: '12px', background: '#F9F9F9', borderRadius: '6px' }}>
+            <h3 style={{ color: '#FF6B35', marginBottom: '10px', fontSize: '14px' }}>Subtareas</h3>
+            
+            {/* Lista de subtareas */}
+            {sla.subtasks && sla.subtasks.length > 0 && (
+              <div style={{ marginBottom: '10px', maxHeight: '150px', overflowY: 'auto' }}>
+                {sla.subtasks.map((subtask) => (
+                  <div
+                    key={subtask.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '6px',
+                      marginBottom: '4px',
+                      background: subtask.completed ? '#F5F5F5' : 'white',
+                      borderRadius: '4px',
+                      border: '1px solid #e0e0e0',
+                      textDecoration: subtask.completed ? 'line-through' : 'none',
+                      opacity: subtask.completed ? 0.6 : 1
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={subtask.completed}
+                      onChange={(e) => {
+                        const updatedSubtasks = sla.subtasks?.map(st =>
+                          st.id === subtask.id ? { ...st, completed: e.target.checked } : st
+                        ) || [];
+                        const updated = { ...sla, subtasks: updatedSubtasks };
+                        saveSLA(updated);
+                        setSla(updated);
+                        onUpdate();
+                      }}
+                      disabled={subtask.completed}
+                      style={{
+                        width: '16px',
+                        height: '16px',
+                        cursor: subtask.completed ? 'not-allowed' : 'pointer'
+                      }}
+                    />
+                    <span style={{
+                      flex: 1,
+                      color: subtask.completed ? '#999' : '#333',
+                      fontSize: '12px'
+                    }}>
+                      {subtask.title}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Agregar nueva subtarea */}
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <input
+                type="text"
+                value={newSubtaskTitle}
+                onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && newSubtaskTitle.trim()) {
+                    const newSubtask: Subtask = {
+                      id: `subtask_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                      title: newSubtaskTitle.trim(),
+                      completed: false
+                    };
+                    const updatedSubtasks = [...(sla.subtasks || []), newSubtask];
+                    const updated = { ...sla, subtasks: updatedSubtasks };
+                    saveSLA(updated);
+                    setSla(updated);
+                    setNewSubtaskTitle('');
+                    onUpdate();
+                  }
+                }}
+                placeholder="Agregar nueva subtarea..."
+                className="input"
+                style={{ flex: 1, marginBottom: 0, fontSize: '12px', padding: '6px' }}
+              />
+              <button
+                onClick={() => {
+                  if (newSubtaskTitle.trim()) {
+                    const newSubtask: Subtask = {
+                      id: `subtask_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                      title: newSubtaskTitle.trim(),
+                      completed: false
+                    };
+                    const updatedSubtasks = [...(sla.subtasks || []), newSubtask];
+                    const updated = { ...sla, subtasks: updatedSubtasks };
+                    saveSLA(updated);
+                    setSla(updated);
+                    setNewSubtaskTitle('');
+                    onUpdate();
+                  }
+                }}
+                className="btn btn-primary"
+                style={{ whiteSpace: 'nowrap', padding: '6px 12px', fontSize: '12px' }}
+              >
+                Agregar
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div style={{ marginBottom: '12px' }}>
+          <SLATimer 
+            sla={sla} 
+            onUpdate={() => {
+              const updated = getSLAById(sla.id);
+              if (updated) {
+                setSla(updated);
+              }
+              onUpdate();
+            }} 
+          />
+        </div>
 
         <button
           onClick={handleComplete}
           className="btn btn-primary"
-          style={{ width: '100%', marginTop: '20px' }}
+          style={{ width: '100%', marginTop: '8px', padding: '10px', fontSize: '14px' }}
         >
           Terminar SLA
         </button>

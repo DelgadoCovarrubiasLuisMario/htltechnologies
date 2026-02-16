@@ -86,6 +86,7 @@ export const createSLA = (name: string, type: string, sopId: string, asignacion?
     sopId,
     asignacion,
     encargado,
+    subtasks: [],
   };
 };
 

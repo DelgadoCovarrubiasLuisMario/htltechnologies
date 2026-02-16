@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useMemo, useEffect, useState } from 'react';
 import HeaderLogo from '@/app/components/HeaderLogo';
 import SLATrackingChartGlobal from '@/app/components/SLATrackingChartGlobal';
+import { getAllSLAs, getSLAsBySOP } from '@/app/utils/slaStorage';
+import { getSLADuration, isBusinessDaysType, calculateElapsedTime } from '@/app/types/sla';
 
 const SOP_MENU_ITEMS = [
   { id: 1, title: 'SOP 1-Cotizaciones (distribución, proyectos y compuestos)' },
@@ -24,6 +26,7 @@ const SOP_MENU_ITEMS = [
 export default function DashboardPage() {
   const router = useRouter();
   const [showGlobalChart, setShowGlobalChart] = useState(false);
+  const [slaCounts, setSlaCounts] = useState<Record<number, { active: number; completed: number }>>({});
 
   // Verificar autenticación solo una vez al montar
   useEffect(() => {
@@ -34,6 +37,27 @@ export default function DashboardPage() {
       }
     }
   }, [router]);
+
+  // Calcular contadores de SLA por departamento
+  useEffect(() => {
+    const calculateCounts = () => {
+      const counts: Record<number, { active: number; completed: number }> = {};
+      
+      SOP_MENU_ITEMS.forEach((item) => {
+        const slas = getSLAsBySOP(item.id.toString());
+        const active = slas.filter(sla => sla.status === 'active').length;
+        const completed = slas.filter(sla => sla.status === 'completed').length;
+        counts[item.id] = { active, completed };
+      });
+      
+      setSlaCounts(counts);
+    };
+
+    calculateCounts();
+    // Actualizar cada 5 segundos
+    const interval = setInterval(calculateCounts, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('authenticated');
@@ -52,14 +76,90 @@ export default function DashboardPage() {
           HTL Electronics - Tablero de medición
         </h1>
 
-        <div className="menu-grid">
-          {menuItems.map((item) => (
-            <Link key={item.id} href={`/dashboard/sop/${item.id}`} prefetch={false}>
-              <div className="menu-item">
-                <h3>{item.title}</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div className="menu-grid">
+            {menuItems.map((item) => {
+              const counts = slaCounts[item.id] || { active: 0, completed: 0 };
+              return (
+                <Link key={item.id} href={`/dashboard/sop/${item.id}`} prefetch={false}>
+                  <div className="menu-item">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                      <h3 style={{ margin: 0, flex: 1 }}>{item.title}</h3>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        {counts.active > 0 && (
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            background: '#FFF5F0',
+                            padding: '4px 8px',
+                            borderRadius: '12px'
+                          }}>
+                            <div style={{
+                              width: '12px',
+                              height: '12px',
+                              borderRadius: '50%',
+                              background: '#FF6B35'
+                            }}></div>
+                            <span style={{ fontSize: '14px', fontWeight: '600', color: '#333' }}>{counts.active}</span>
+                          </div>
+                        )}
+                        {counts.completed > 0 && (
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            background: '#F5F5F5',
+                            padding: '4px 8px',
+                            borderRadius: '12px'
+                          }}>
+                            <div style={{
+                              width: '12px',
+                              height: '12px',
+                              borderRadius: '50%',
+                              background: '#6B6B6B'
+                            }}></div>
+                            <span style={{ fontSize: '14px', fontWeight: '600', color: '#333' }}>{counts.completed}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Leyenda de colores - abajo a la izquierda */}
+          <div style={{
+            padding: '12px 16px',
+            background: '#F5F5F5',
+            borderRadius: '8px',
+            display: 'inline-block',
+            fontSize: '13px',
+            alignSelf: 'flex-start'
+          }}>
+            <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{
+                  width: '14px',
+                  height: '14px',
+                  borderRadius: '50%',
+                  background: '#FF6B35'
+                }}></div>
+                <span style={{ color: '#333' }}>SLA's Activos</span>
               </div>
-            </Link>
-          ))}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{
+                  width: '14px',
+                  height: '14px',
+                  borderRadius: '50%',
+                  background: '#6B6B6B'
+                }}></div>
+                <span style={{ color: '#333' }}>SLA's Terminados</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Botón para mostrar gráfica global */}

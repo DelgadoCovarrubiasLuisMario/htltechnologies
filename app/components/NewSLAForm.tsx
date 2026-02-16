@@ -109,7 +109,7 @@ export default function NewSLAForm({ sopId, onSave }: NewSLAFormProps) {
             >
               {slaTypes.map((slaType) => (
                 <option key={slaType.id} value={slaType.id}>
-                  {slaType.name} ({formatDuration(slaType.durationMs)})
+                  {slaType.name}
                 </option>
               ))}
             </select>

@@ -145,21 +145,39 @@ export default function SLAHistory({ sopId, onSlaClick }: SLAHistoryProps) {
             const progressColor = getProgressColor(progress);
             const remainingTime = getRemainingTime(sla);
             const overdue = isOverdue(sla);
-            const statusText = sla.status === 'active' 
-              ? 'Activo' 
-              : overdue 
-                ? 'Terminado fuera de SLA' 
-                : 'Terminado';
-            const statusColor = sla.status === 'active' 
-              ? '#FF6B35' 
-              : overdue 
-                ? '#F44336' 
-                : '#6B6B6B';
-            const statusBackground = sla.status === 'active' 
-              ? '#FFF5F0' 
-              : overdue 
-                ? '#FFEBEE' 
-                : '#E8E8E8';
+            
+            // Determinar estado según si está activo/completado y si está vencido
+            let statusText = '';
+            let statusColor = '';
+            let statusBackground = '';
+            
+            if (sla.status === 'active') {
+              const duration = getSLADuration(sla);
+              const isBusinessDays = isBusinessDaysType(sla.sopId, sla.type);
+              const now = Date.now();
+              const elapsed = calculateElapsedTime(sla.startTime, now, isBusinessDays);
+              const isActiveOverdue = elapsed > duration;
+              
+              if (isActiveOverdue) {
+                statusText = 'Activo vencido';
+                statusColor = '#FF9800';
+                statusBackground = '#FFF5F0';
+              } else {
+                statusText = 'Activo en tiempo';
+                statusColor = '#FF6B35';
+                statusBackground = '#FFF5F0';
+              }
+            } else {
+              if (overdue) {
+                statusText = 'Terminado vencido';
+                statusColor = '#F44336';
+                statusBackground = '#FFEBEE';
+              } else {
+                statusText = 'Terminado en tiempo';
+                statusColor = '#4CAF50';
+                statusBackground = '#F0F9F0';
+              }
+            }
 
             return (
               <div
